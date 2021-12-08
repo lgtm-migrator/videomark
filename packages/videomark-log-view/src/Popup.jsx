@@ -11,10 +11,11 @@ import SettingsIcon from "@material-ui/icons/Settings";
 import ThemeProvider from "./js/components/ThemeProvider";
 import helpURL from "./js/utils/helpURL";
 import QualityUiSetting from "./QualityUiSetting";
-import logo from "./images/logo.png";
+import logoLight from "./images/logo.png";
+import logoDark from "./images/logo-invert.png";
 
 // ポップアップウィンドウのサイズを調整
-const CSS = () => <style>{`body{min-width:286px;}`}</style>;
+const CSS = () => <style>{`body{margin:16px;width:216px;}`}</style>;
 
 const useStyles = makeStyles((theme) => {
   return {
@@ -30,6 +31,14 @@ const useStyles = makeStyles((theme) => {
         ...theme.typography.h6,
       },
     },
+    logo: {
+      "& img": {
+        display: "block",
+        margin: "24px auto",
+        width: 200,
+        verticalAlign: "top",
+      },
+    },
   };
 });
 
@@ -39,11 +48,25 @@ const LabeledIconButton = ({ href, icon, label }) => {
   return (
     <Button
       className={classes.button}
-      href={href}
-      target="_blank"
       startIcon={React.createElement(icon)}
-      onClick={() => {
-        window.open(href);
+      onClick={async () => {
+        const url = href instanceof URL ? href : new URL(href, location.href);
+        // 既にタブが開かれていないか確認、ただし URL のハッシュ部分は無視する
+        const [existingTab] = await new Promise((resolve) => {
+          chrome.tabs.query({ url: `${url.origin}${url.pathname}` }, (tabs) => resolve(tabs));
+        });
+
+        if (existingTab) {
+          // 既にタブが開かれていればそのタブを選択し、同一 URL (ハッシュ) でなければページを切り替え
+          chrome.tabs.update(existingTab.id, {
+            active: true,
+            url: existingTab.url !== url.href ? url.href : undefined,
+          });
+        } else {
+          chrome.tabs.create({ url: url.href });
+        }
+
+        // Firefox ではポップアップを明示的に閉じる必要がある
         window.close();
       }}
     >
@@ -58,23 +81,31 @@ LabeledIconButton.propTypes = {
 };
 
 export default () => {
+  const classes = useStyles();
+
   return (
     <ThemeProvider>
       <CSS />
-      <Box paddingTop={2} component={Container}>
-        <img src={logo} alt="Web VideoMark" />
+      <Box padding={0} component={Container}>
+        <picture className={classes.logo}>
+          <source srcSet={logoDark} media="(prefers-color-scheme: dark)" />
+          <img src={logoLight} alt="Web VideoMark" />
+        </picture>
         <Box marginTop={2}>
-          <LabeledIconButton href="#/" icon={EqualizerIcon} label="測定結果" />
+          <LabeledIconButton href="#/" icon={EqualizerIcon} label="計測結果" />
           <LabeledIconButton href="#/history" icon={HistoryIcon} label="履歴" />
-          <LabeledIconButton href={helpURL} icon={HelpIcon} label="使い方" />
           <LabeledIconButton
             href="#/settings"
             icon={SettingsIcon}
             label="設定"
           />
+          <LabeledIconButton href={helpURL} icon={HelpIcon} label="使い方" />
         </Box>
         <QualityUiSetting />
       </Box>
     </ThemeProvider>
   );
 };
+
+// コンテキストメニューを無効化
+window.addEventListener('contextmenu', (event) => event.preventDefault());

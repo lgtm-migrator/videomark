@@ -133,6 +133,10 @@ export default class Config {
     return this.peak_time_limit_url;
   }
 
+  static get_event_data_max_size() {
+    return this.event_data_max_size;
+  }
+
   static is_quality_control() {
     return this.quality_control;
   }
@@ -249,6 +253,8 @@ Config.sodium_server_url = SODIUM_SERVER_URL;
 // ネットワークの混雑する時間帯には自動的にビットレートを制限する設定ファイル
 Config.peak_time_limit_url = PEAK_TIME_LIMIT_URL;
 
+Config.event_data_max_size = EVENT_DATA_MAX_SIZE;
+
 // 暫定QoE値保持数
 Config.num_of_latest_qoe = 20;
 
@@ -329,6 +335,11 @@ Config.video_platforms = [
     // IIJ TWILIGHT CONCERT
     id: "iijtwilightconcert",
     host: /^pr\.iij\.ad\.jp$/
+  },
+  {
+    // gorin.jp
+    id: "gorinjp",
+    host: /(^|\.)gorin\.jp$/
   }
 ];
 
@@ -387,12 +398,13 @@ Config.ui.youtube = {
 // そのタイミングでは .vjs-user-active でもコントロールが隠れることに注意
 // .video-js 要素は複数あるので #playerWrapper 配下のものに限定する
 Config.ui.tver = {
-  target: "#playerWrapper > .video-js",
+  target: "#playerWrapper > .video-js, #gorinPlayer",
   style: `#${Config.ui.id} {
   position: absolute;
   z-index: 1000001;
-  top: calc(12px + 2em);
+  top: 12px;
   left: 12px;
+  text-align: left;
   transition: 1.0s cubic-bezier(0.4, 0.09, 0, 1.6);
 }
 .vjs-user-inactive > #${Config.ui.id},
@@ -505,6 +517,23 @@ Config.ui.iijtwilightconcert = {
 }`
 };
 
+// gorin.jpはほぼtver
+Config.ui.gorinjp = {
+  target: ".videoContainer > video-js",
+  style: `#${Config.ui.id} {
+  position: absolute;
+  z-index: 1000001;
+  top: 12px;
+  left: 12px;
+  text-align: left;
+  transition: 1.0s cubic-bezier(0.4, 0.09, 0, 1.6);
+}
+.vjs-user-inactive > #${Config.ui.id},
+.not-hover > #${Config.ui.id} {
+  opacity: 0;
+}`
+};
+
 // デフォルトResourceTimingAPIのバッファサイズ
 Config.DEFAULT_RESOURCE_BUFFER_SIZE = 150;
 
@@ -553,10 +582,12 @@ if (Config.isVMBrowser()) {
   });
 } else if (document.currentScript != null) {
   // content_scriptsによって書き込まれるオブジェクトのデシリアライズ
-  const session = new URLSearchParams(document.currentScript.dataset.session);
+  const session = Object.fromEntries(
+    new URLSearchParams(document.currentScript.dataset.session)
+  );
   Config.session = {
-    id: session.get("id"),
-    expires: Number(session.get("expires"))
+    ...session,
+    expires: Number(session.expires),
   };
 
   Config.settings = JSON.parse(document.currentScript.dataset.settings);

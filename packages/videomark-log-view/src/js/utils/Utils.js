@@ -12,12 +12,9 @@ export const urlToVideoPlatform = (url) => {
 };
 
 export const isDevelop = () => process.env.NODE_ENV === "development";
-export const isVMBrowser = () =>
-  window.sodium !== undefined && window.chrome.storage === undefined;
-export const isExtension = () =>
-  window.sodium === undefined && window.chrome.storage !== undefined;
-export const isWeb = () =>
-  window.sodium === undefined && window.chrome.storage === undefined;
+export const isVMBrowser = () => "sodium" in window;
+export const isExtension = () => !isVMBrowser() && "storage" in window.chrome;
+export const isWeb = () => !(isVMBrowser() || isExtension());
 
 export const sizeFormat = (bytes, exponent) => {
   const divider = 1024 ** exponent;
@@ -34,16 +31,18 @@ export const megaSizeFormat = (bytes) => sizeFormat(bytes, 2);
 export const kiloSizeFormat = (bytes) => sizeFormat(bytes, 1);
 
 // 必ず変数に確保してから使うこと。条件式に直接使ってはいけない
-export const isMobile = () => {
+export const useMobile = () => {
   const [platformInfo, setPlatformInfo] = useState(false);
 
   useEffect(() => {
-    if (window.sodium !== undefined) {
+    if (isWeb()) return;
+
+    if (isVMBrowser()) {
       setPlatformInfo({ os: "android" });
     } else {
-      chrome.runtime.getPlatformInfo(info => setPlatformInfo(info))
+      chrome.runtime.getPlatformInfo((info) => setPlatformInfo(info));
     }
-  });
+  }, []);
 
   return isVMBrowser() || platformInfo.os === "android";
 };

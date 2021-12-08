@@ -280,6 +280,8 @@ class YouTubeTypeHandler extends GeneralTypeHandler {
     }
 
     static add_throughput_history(throughput) {
+        console.debug(`add_throughput_history: downloadSize=${throughput.downloadSize}`)
+        if (throughput.downloadSize <= 0) return;
         YouTubeTypeHandler.throughputHistories.push(throughput);
         YouTubeTypeHandler.throughputHistories = YouTubeTypeHandler.throughputHistories.slice(-Config.get_max_throughput_history_size());
     }
@@ -480,7 +482,7 @@ class YouTubeTypeHandler extends GeneralTypeHandler {
         try {
             const duration = this.player.getDuration();
 
-            return !duration || Number.isNaN(duration) ? -1 : duration;
+            return duration && Number.isFinite(duration) ? duration : -1;
         } catch (e) {
             return -1;
         }

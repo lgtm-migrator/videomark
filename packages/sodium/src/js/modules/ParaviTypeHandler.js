@@ -155,6 +155,8 @@ export default class ParaviTypeHandler {
 
     // eslint-disable-next-line camelcase
     static add_throughput_history(throughput) {
+        console.debug(`add_throughput_history: downloadSize=${throughput.downloadSize}`)
+        if (throughput.downloadSize <= 0) return;
         ParaviTypeHandler.throughputHistories.push(throughput);
         ParaviTypeHandler.throughputHistories = ParaviTypeHandler.throughputHistories.slice(-Config.get_max_throughput_history_size());
     }
@@ -268,7 +270,7 @@ export default class ParaviTypeHandler {
     static get_duration() {
         const duration = videojs.getAllPlayers()[0].duration();
 
-        return !duration || Number.isNaN(duration) ? -1 : duration;
+        return duration && Number.isFinite(duration) ? duration : -1;
     }
 
     // eslint-disable-next-line camelcase
